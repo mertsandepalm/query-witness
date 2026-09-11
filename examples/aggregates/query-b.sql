@@ -1,0 +1,1 @@
+SELECT COUNT(x) FROM t;

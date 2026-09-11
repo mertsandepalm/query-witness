@@ -1,0 +1,1 @@
+SELECT x, COUNT(x) FROM t GROUP BY x;

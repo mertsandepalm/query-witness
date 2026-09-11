@@ -1,0 +1,1 @@
+CREATE TABLE stock (item_id INTEGER PRIMARY KEY, quantity INTEGER NOT NULL);

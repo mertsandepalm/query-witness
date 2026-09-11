@@ -1,0 +1,10 @@
+# Exact build inputs; install these and build with --no-isolation.
+build==1.6.1
+hatchling==1.32.0
+packaging==26.3
+pathspec==1.1.1
+pluggy==1.6.0
+pyproject_hooks==1.2.0
+tomlkit==0.15.1
+trove-classifiers==2026.6.1.19
+twine==7.0.0

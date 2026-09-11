@@ -1,0 +1,7 @@
+.venv/
+.release-venv/
+__pycache__/
+.pytest_cache/
+dist/
+*.egg-info/
+witness/

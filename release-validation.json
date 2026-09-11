@@ -1,0 +1,461 @@
+{
+  "release": "0.1.0",
+  "date": "2026-09-11",
+  "case_origin": "Constructed realistic examples; not customer incidents",
+  "platform": "Linux x86_64 CPython",
+  "runtime_dependencies": {
+    "duckdb": "1.5.5",
+    "sqlglot": "30.18.0"
+  },
+  "python_checks": [
+    {
+      "python": "3.11.16",
+      "tests_passed": 570,
+      "result": "passed",
+      "installation": "fresh venv outside repository; installed updated wheel; tests/examples from matching source archive"
+    },
+    {
+      "python": "3.12.14",
+      "tests_passed": 570,
+      "result": "passed",
+      "installation": "fresh venv outside repository; installed updated wheel; tests/examples from matching source archive"
+    },
+    {
+      "python": "3.13.15",
+      "tests_passed": 570,
+      "result": "passed",
+      "installation": "fresh venv outside repository; installed updated wheel; tests/examples from matching source archive"
+    },
+    {
+      "python": "3.14.7",
+      "tests_passed": 570,
+      "result": "passed",
+      "installation": "fresh venv outside repository; installed updated wheel; tests/examples from matching source archive"
+    }
+  ],
+  "source_sha256": {
+    "query_witness/__init__.py": "91447944015cec709e8aa7655f7e9d64e1e4508e7023a57fe3746911c0fc6fed",
+    "query_witness/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "query_witness/artifact.py": "94713537d63f2ff7512ab14cd908bbbb00b187dbdaa72b6653f9f5fae75e5204",
+    "query_witness/cli.py": "d6b49120f29c89e4f92953223a3bd90721bb40d5ffa81445a5cef379566f4455",
+    "query_witness/core.py": "cb1faf958a6f4df163413a6a31913ce98e937f8ea05ce95e84a0c94bcf7dd980",
+    "query_witness/subset.py": "8bc13f8ef3e3d39340315def5a73dc9b8f41b6683665fe673d1b4a0889f1ddbf"
+  },
+  "cases": [
+    {
+      "case": "aggregate-pushdown",
+      "exit_code": 0,
+      "witness": {
+        "format_version": 1,
+        "versions": {
+          "query_witness": "0.1.0",
+          "duckdb": "1.5.5",
+          "sqlglot": "30.18.0"
+        },
+        "comparison_policy": "integer-position-v2",
+        "comparison_order": "bags",
+        "config": {
+          "max_rows": 4,
+          "max_candidates": 64,
+          "timeout_seconds": 5.0,
+          "memory_mb": 64
+        },
+        "schema": "CREATE TABLE payments (customer_id INTEGER NOT NULL, amount_cents INTEGER NOT NULL);\n",
+        "query_a": "SELECT customer_id, SUM(amount_cents) AS total_cents\nFROM payments\nGROUP BY customer_id\nHAVING SUM(amount_cents) > 10000;\n",
+        "query_b": "SELECT customer_id, SUM(amount_cents) AS total_cents\nFROM payments\nWHERE amount_cents > 10000\nGROUP BY customer_id\nHAVING SUM(amount_cents) > 10000;\n",
+        "rows": [
+          [
+            10000,
+            10000
+          ],
+          [
+            10000,
+            10000
+          ]
+        ],
+        "results": [
+          {
+            "types": [
+              "INTEGER",
+              "HUGEINT"
+            ],
+            "rows": [
+              [
+                10000,
+                20000
+              ]
+            ]
+          },
+          {
+            "types": [
+              "INTEGER",
+              "HUGEINT"
+            ],
+            "rows": []
+          }
+        ],
+        "search": {
+          "candidates_checked": 44,
+          "reduction": "row deletion completed; not globally minimal"
+        }
+      },
+      "verification": [
+        "inserted into exact schema in DuckDB",
+        "both result bags independently checked",
+        "reproduce.sql executed",
+        "replayed after deleting original input directory"
+      ]
+    },
+    {
+      "case": "assigned-count",
+      "exit_code": 0,
+      "witness": {
+        "format_version": 1,
+        "versions": {
+          "query_witness": "0.1.0",
+          "duckdb": "1.5.5",
+          "sqlglot": "30.18.0"
+        },
+        "comparison_policy": "integer-position-v2",
+        "comparison_order": "bags",
+        "config": {
+          "max_rows": 4,
+          "max_candidates": 64,
+          "timeout_seconds": 5.0,
+          "memory_mb": 64
+        },
+        "schema": "CREATE TABLE tickets (ticket_id INTEGER PRIMARY KEY, assignee_id INTEGER);\n",
+        "query_a": "SELECT COUNT(*) AS ticket_count FROM tickets;\n",
+        "query_b": "SELECT COUNT(assignee_id) AS ticket_count FROM tickets;\n",
+        "rows": [
+          [
+            -1,
+            null
+          ]
+        ],
+        "results": [
+          {
+            "types": [
+              "BIGINT"
+            ],
+            "rows": [
+              [
+                1
+              ]
+            ]
+          },
+          {
+            "types": [
+              "BIGINT"
+            ],
+            "rows": [
+              [
+                0
+              ]
+            ]
+          }
+        ],
+        "search": {
+          "candidates_checked": 2,
+          "reduction": "row deletion completed; not globally minimal"
+        }
+      },
+      "verification": [
+        "inserted into exact schema in DuckDB",
+        "both result bags independently checked",
+        "reproduce.sql executed",
+        "replayed after deleting original input directory"
+      ]
+    },
+    {
+      "case": "customer-distinct",
+      "exit_code": 0,
+      "witness": {
+        "format_version": 1,
+        "versions": {
+          "query_witness": "0.1.0",
+          "duckdb": "1.5.5",
+          "sqlglot": "30.18.0"
+        },
+        "comparison_policy": "integer-position-v2",
+        "comparison_order": "bags",
+        "config": {
+          "max_rows": 4,
+          "max_candidates": 64,
+          "timeout_seconds": 5.0,
+          "memory_mb": 64
+        },
+        "schema": "CREATE TABLE purchases (customer_id INTEGER NOT NULL);\n",
+        "query_a": "SELECT DISTINCT customer_id FROM purchases WHERE customer_id > 0;\n",
+        "query_b": "SELECT customer_id FROM purchases WHERE customer_id > 0;\n",
+        "rows": [
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        "results": [
+          {
+            "types": [
+              "INTEGER"
+            ],
+            "rows": [
+              [
+                1
+              ]
+            ]
+          },
+          {
+            "types": [
+              "INTEGER"
+            ],
+            "rows": [
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ]
+          }
+        ],
+        "search": {
+          "candidates_checked": 9,
+          "reduction": "row deletion completed; not globally minimal"
+        }
+      },
+      "verification": [
+        "inserted into exact schema in DuckDB",
+        "both result bags independently checked",
+        "reproduce.sql executed",
+        "replayed after deleting original input directory"
+      ]
+    },
+    {
+      "case": "equivalent-control",
+      "exit_code": 1,
+      "candidates_checked": 20,
+      "outcome": "no counterexample within budget; not an equivalence proof"
+    },
+    {
+      "case": "join-fanout",
+      "exit_code": 0,
+      "witness": {
+        "format_version": 1,
+        "versions": {
+          "query_witness": "0.1.0",
+          "duckdb": "1.5.5",
+          "sqlglot": "30.18.0"
+        },
+        "comparison_policy": "integer-position-v2",
+        "comparison_order": "bags",
+        "config": {
+          "max_rows": 4,
+          "max_candidates": 64,
+          "timeout_seconds": 5.0,
+          "memory_mb": 64
+        },
+        "schema": "CREATE TABLE purchases (customer_id INTEGER NOT NULL, product_id INTEGER NOT NULL);\n",
+        "query_a": "SELECT customer_id, product_id FROM purchases WHERE product_id > 0;\n",
+        "query_b": "SELECT a.customer_id, a.product_id\nFROM purchases AS a\nJOIN purchases AS b ON a.customer_id = b.customer_id\nWHERE a.product_id > 0;\n",
+        "rows": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "results": [
+          {
+            "types": [
+              "INTEGER",
+              "INTEGER"
+            ],
+            "rows": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          {
+            "types": [
+              "INTEGER",
+              "INTEGER"
+            ],
+            "rows": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          }
+        ],
+        "search": {
+          "candidates_checked": 14,
+          "reduction": "row deletion completed; not globally minimal"
+        }
+      },
+      "verification": [
+        "inserted into exact schema in DuckDB",
+        "both result bags independently checked",
+        "reproduce.sql executed",
+        "replayed after deleting original input directory"
+      ]
+    },
+    {
+      "case": "stock-boundary",
+      "exit_code": 0,
+      "witness": {
+        "format_version": 1,
+        "versions": {
+          "query_witness": "0.1.0",
+          "duckdb": "1.5.5",
+          "sqlglot": "30.18.0"
+        },
+        "comparison_policy": "integer-position-v2",
+        "comparison_order": "bags",
+        "config": {
+          "max_rows": 4,
+          "max_candidates": 64,
+          "timeout_seconds": 5.0,
+          "memory_mb": 64
+        },
+        "schema": "CREATE TABLE stock (item_id INTEGER PRIMARY KEY, quantity INTEGER NOT NULL);\n",
+        "query_a": "SELECT item_id FROM stock WHERE quantity >= 1;\n",
+        "query_b": "SELECT item_id FROM stock WHERE quantity > 1;\n",
+        "rows": [
+          [
+            -1,
+            1
+          ]
+        ],
+        "results": [
+          {
+            "types": [
+              "INTEGER"
+            ],
+            "rows": [
+              [
+                -1
+              ]
+            ]
+          },
+          {
+            "types": [
+              "INTEGER"
+            ],
+            "rows": []
+          }
+        ],
+        "search": {
+          "candidates_checked": 4,
+          "reduction": "row deletion completed; not globally minimal"
+        }
+      },
+      "verification": [
+        "inserted into exact schema in DuckDB",
+        "both result bags independently checked",
+        "reproduce.sql executed",
+        "replayed after deleting original input directory"
+      ]
+    },
+    {
+      "case": "unsupported-outer-join",
+      "exit_code": 2,
+      "outcome": "unsupported input: Unsupported option on Join",
+      "exported": false
+    }
+  ],
+  "build_tools": {
+    "build": "1.6.1",
+    "hatchling": "1.32.0",
+    "packaging": "26.3",
+    "pathspec": "1.1.1",
+    "pluggy": "1.6.0",
+    "pyproject_hooks": "1.2.0",
+    "tomlkit": "0.15.1",
+    "trove-classifiers": "2026.6.1.19",
+    "twine": "7.0.0"
+  },
+  "source_date_epoch": 1789084800,
+  "package_checks": [
+    "twine check --strict passed for wheel and sdist",
+    "README description matches UTF-8 source",
+    "MIT expression and full license included in both archives",
+    "Requires-Python >=3.11,<3.15",
+    "runtime dependencies exactly DuckDB 1.5.5 and SQLGlot 30.18.0",
+    "console entry point and installed version match",
+    "all examples, tests, build instructions and records included in source archive",
+    "working environments, caches, credentials and distribution artifacts excluded"
+  ],
+  "readme_example": {
+    "result": "passed",
+    "installation": "clean directory; local wheel only; verbatim README commands",
+    "candidates_checked": 2,
+    "rows": [
+      [
+        -1,
+        null
+      ]
+    ],
+    "query_results": [
+      [
+        [
+          1
+        ]
+      ],
+      [
+        [
+          0
+        ]
+      ]
+    ],
+    "replay_exit_code": 0
+  },
+  "reproducibility": {
+    "result": "passed",
+    "platform": "Linux x86_64 CPython 3.11.16",
+    "checks": [
+      "two fresh builds produce identical wheel and sdist bytes",
+      "wheel and sdist rebuilt from extracted sdist produce identical bytes"
+    ],
+    "checksums": "dist/SHA256SUMS; regenerate using RELEASE.md"
+  },
+  "test_source_sha256": {
+    "tests/test_slice.py": "9cbc326a1ce4871fbf01bd207291a4e02709d5324bb2f3a839187c68ae7179a8",
+    "tests/test_workflows.py": "45b95c0aac309fdda40f4ed02327b6248dec706d233cd378d83dccb5fd138a34"
+  },
+  "revision": "followup-correctness-fixes-2026-09-11",
+  "validation_status": "passed",
+  "review_fixes": [
+    "R1: sequence replay requires ORDER BY in both queries; conservative bags preserved",
+    "R2: DuckDB-wrapped KeyboardInterrupt retains cancellation status",
+    "R3: JSON decoder RecursionError is invalid witness input",
+    "R4: watchdog initialization failure closes the connection; thread exhaustion is a limit",
+    "F1: native DuckDB parsing of all original source precedes execution; parser rejection is unsupported input; generated SQL errors retain failure classification",
+    "F2: completed search, reduction and replay outcomes check the deadline after Python comparison; export exemption unchanged"
+  ],
+  "artifact_verification_receipt": "dist/final-validation.json; outside archives to avoid self-referential hashes"
+}
