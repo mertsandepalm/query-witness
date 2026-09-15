@@ -134,7 +134,9 @@ def load(directory):
     for component in ("query_witness", "duckdb", "sqlglot"):
         if type(recorded.get(component)) is not str:
             raise ValueError(f"Witness missing/invalid field: versions.{component}")
-        if recorded[component] != versions()[component]:
+    current = versions()
+    for component in ("duckdb", "sqlglot"):
+        if recorded[component] != current[component]:
             raise ValueError(f"Replay requires recorded {component} version {recorded[component]}")
     config_fields = set(asdict(Config()))
     if set(payload["config"]) != config_fields:

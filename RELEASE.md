@@ -1,5 +1,8 @@
 # Query Witness 0.1.0 release preparation
 
+Current shipping process: [RELEASING.md](RELEASING.md). This file is the
+recorded 0.1.0 validation. Keep it; do not treat it as the live runbook.
+
 This file, [release-validation.json](release-validation.json), the
 [five constructed scenarios](examples/rewrite-mistakes/README.md), and their tests
 are the durable validation record. They belong in the repository and source

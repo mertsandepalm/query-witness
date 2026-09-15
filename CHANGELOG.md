@@ -1,5 +1,15 @@
 # Release notes
 
+## 0.1.1 — installable upgrades
+
+Replay no longer requires the installed Query Witness version to match the
+version recorded in `witness.json`. DuckDB 1.5.5, SQLGlot 30.18.0, format
+version 1, and a known comparison policy are still required. `pip install -U
+query-witness` can therefore keep replaying folders exported by 0.1.0.
+
+Install with pip, pipx, or uv. GitHub Actions builds, verifies, and publishes
+tagged releases. There is no npm package.
+
 ## 0.1.0 — release candidate
 
 Query Witness searches small, valid DuckDB databases, reduces a discrepancy by
@@ -13,9 +23,10 @@ row deletion, and exports the source SQL, data, configuration, and both results.
   join queries remain unsupported.
 - Positional integer/NULL comparison preserves duplicates. Sequences are compared
   only when both queries have ORDER BY; otherwise comparison uses bags.
-- Replay reads exported data without generation. It requires the recorded
-  Query Witness, DuckDB, and SQLGlot versions: this release uses 0.1.0, 1.5.5,
-  and 30.18.0 respectively. Python's version is not a replay pin.
+- Replay reads exported data without generation. This release records Query
+  Witness 0.1.0, DuckDB 1.5.5, and SQLGlot 30.18.0. Python's version is not a
+  replay pin. 0.1.1 keeps the engine pins and stops requiring the CLI version
+  to match.
 - Legacy `integer-bags-v1` witnesses remain readable. New exports record
   `integer-position-v2` and an explicit comparison mode.
 
