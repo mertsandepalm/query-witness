@@ -8,6 +8,7 @@ import duckdb
 from . import __version__
 from .artifact import export, load, witness_text
 from .core import Config, Engine, Limit, ORDER_NOTICE, POLICY, both_ordered, differs, search
+from .mutate import proposals
 from .subset import Unsupported, parse
 
 
@@ -48,6 +49,19 @@ def parser():
                        help="DuckDB buffer-manager budget only; does not cap the Python process.")
     replay = commands.add_parser("replay", help="Replay exported data; no generation")
     replay.add_argument("directory", type=Path)
+    mutate = commands.add_parser(
+        "mutate",
+        help="Apply named in-subset rewrite mistakes to query A and search each pair",
+    )
+    mutate.add_argument("--schema", required=True, type=Path)
+    mutate.add_argument("--query-a", required=True, type=Path)
+    mutate.add_argument("--out", type=Path, default=Path("mutations"))
+    mutate.add_argument("--max-rows", type=int, default=4)
+    mutate.add_argument("--max-candidates", type=int, default=64)
+    mutate.add_argument("--timeout-seconds", type=float, default=5.0,
+                        help="Elapsed budget per mutation; cooperative DuckDB interrupt.")
+    mutate.add_argument("--memory-mb", type=int, default=64,
+                        help="DuckDB buffer-manager budget only; does not cap the Python process.")
     return root
 
 
@@ -64,28 +78,83 @@ def emit(outcome, diagnostic, detail=None):
     return int(outcome)
 
 
+def check_pair(schema, query_a, query_b, config, out, start):
+    inputs = parse(schema, query_a, query_b)
+    if inputs.ordered[0] != inputs.ordered[1]:
+        print(ORDER_NOTICE)
+    if time.monotonic() >= start + config.timeout_seconds:
+        raise Limit("Elapsed-time budget reached")
+    with Engine(inputs, config, start + config.timeout_seconds) as engine:
+        found, checked, reason = search(engine)
+    if found is None:
+        return emit(Outcome.NO_COUNTEREXAMPLE, f"Checked {checked} candidates; {reason}.")
+    rows, results = found
+    export(out, inputs, config, rows, results, checked)
+    return emit(
+        Outcome.FOUND,
+        f"Checked {checked} candidates. Reduced by row deletion; not globally minimal.\n"
+        f"Exported to {out}. Replay: query-witness replay {out}",
+        witness_text(inputs, rows, results, both_ordered(inputs)),
+    )
+
+
+def mutate_command(args):
+    schema = read_sql(args.schema)
+    query_a = read_sql(args.query_a)
+    config = Config(args.max_rows, args.max_candidates, args.timeout_seconds, args.memory_mb)
+    applied = list(proposals(schema, query_a))
+    if not applied:
+        return emit(
+            Outcome.NO_COUNTEREXAMPLE,
+            "No in-subset rewrite mutations applied to this query.",
+        )
+    if args.out.exists() or args.out.is_symlink():
+        raise FileExistsError(f"Output already exists: {args.out}")
+    args.out.mkdir()
+    found = 0
+    limited = 0
+    failed = 0
+    print(f"Mutations: {len(applied)}")
+    for name, query_b in applied:
+        print(f"\nMutation: {name}")
+        start = time.monotonic()
+        try:
+            code = check_pair(schema, query_a, query_b, config, args.out / name, start)
+        except Unsupported as exc:
+            code = emit(Outcome.UNSUPPORTED, str(exc))
+        except (Limit, duckdb.OutOfMemoryException, MemoryError) as exc:
+            code = emit(Outcome.LIMIT, str(exc) or "Memory exhausted")
+        except (duckdb.Error, OSError, ValueError) as exc:
+            code = emit(Outcome.FAILURE, f"{type(exc).__name__}: {exc}")
+        if code == Outcome.FOUND:
+            found += 1
+        elif code == Outcome.LIMIT:
+            limited += 1
+        elif code == Outcome.FAILURE:
+            failed += 1
+    summary = f"Mutations with a witness: {found} of {len(applied)}."
+    if found:
+        return emit(Outcome.FOUND, summary)
+    if failed:
+        return emit(Outcome.FAILURE, summary)
+    if limited:
+        return emit(Outcome.LIMIT, summary)
+    return emit(Outcome.NO_COUNTEREXAMPLE, summary)
+
+
 def main(argv=None):
     start = time.monotonic()
     try:
         args = parser().parse_args(argv)
         print("Comparison policy: " + POLICY)
+        if args.command == "mutate":
+            return mutate_command(args)
         if args.command == "check":
             config = Config(args.max_rows, args.max_candidates, args.timeout_seconds, args.memory_mb)
-            inputs = parse(read_sql(args.schema), read_sql(args.query_a), read_sql(args.query_b))
-            if inputs.ordered[0] != inputs.ordered[1]:
-                print(ORDER_NOTICE)
-            if time.monotonic() >= start + config.timeout_seconds:
-                raise Limit("Elapsed-time budget reached")
-            with Engine(inputs, config, start + config.timeout_seconds) as engine:
-                found, checked, reason = search(engine)
-            if found is None:
-                return emit(Outcome.NO_COUNTEREXAMPLE, f"Checked {checked} candidates; {reason}.")
-            rows, results = found
-            export(args.out, inputs, config, rows, results, checked)
-            return emit(Outcome.FOUND,
-                        f"Checked {checked} candidates. Reduced by row deletion; not globally minimal.\n"
-                        f"Exported to {args.out}. Replay: query-witness replay {args.out}",
-                        witness_text(inputs, rows, results, both_ordered(inputs)))
+            return check_pair(
+                read_sql(args.schema), read_sql(args.query_a), read_sql(args.query_b),
+                config, args.out, start,
+            )
         inputs, config, rows, expected, comparison_order = load(args.directory)
         if inputs.ordered[0] != inputs.ordered[1]:
             print(ORDER_NOTICE)

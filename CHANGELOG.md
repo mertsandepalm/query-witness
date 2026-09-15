@@ -1,5 +1,16 @@
 # Release notes
 
+## 0.2.0 — named rewrite mutations
+
+`query-witness mutate` applies mechanical in-subset rewrite mistakes to query A
+and searches each pair with the existing checker. The operators cover the five
+catalog families: COUNT(*) to COUNT(column), drop DISTINCT, comparison
+boundaries, pushing a SUM filter into WHERE, and a self-join on one column.
+Mutations that leave the subset are skipped. No model is involved; both queries
+are still executed verbatim.
+
+Replay, DuckDB 1.5.5, and SQLGlot 30.18.0 are unchanged.
+
 ## 0.1.1 — installable upgrades
 
 Replay no longer requires the installed Query Witness version to match the

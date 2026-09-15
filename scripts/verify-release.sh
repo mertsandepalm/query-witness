@@ -32,6 +32,8 @@ PY
 cli="$work/venv/bin/query-witness"
 "$cli" --help
 "$cli" check --help
+"$cli" mutate --help
+"$cli" replay --help
 version=$("$work/venv/bin/python" -c 'from query_witness import __version__; print(__version__)')
 test "$("$cli" --version)" = "$version"
 "$cli" check --schema examples/rewrite-mistakes/assigned-count/schema.sql \

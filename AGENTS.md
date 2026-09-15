@@ -18,14 +18,17 @@ Prefer deleting code over adding it. If a helper, class, or module has one call 
 
 ## Shape
 
-Keep these four modules unless a job truly does not fit them:
+Keep these modules unless a job truly does not fit them:
 
 - `cli.py` — argv, outcomes, printing
 - `subset.py` — fail-closed SQL gate; execute source verbatim; never translate
+- `mutate.py` — named in-subset rewrite mistakes; emits a second source string
 - `core.py` — generate, execute, compare, reduce
 - `artifact.py` — export and replay from files, not from a seed
 
-Do not add a fifth module, a package tree, a plugin system, or a config framework.
+Do not add a package tree, a plugin system, or a config framework. Do not put a
+model or API key in the CLI. Mutations are mechanical; `check` still executes
+both sources verbatim.
 
 Dependencies stay DuckDB and SQLGlot. No Hypothesis, ORM, CLI framework, or extra package until a slice proves it removes code.
 
@@ -33,7 +36,7 @@ Dependencies stay DuckDB and SQLGlot. No Hypothesis, ORM, CLI framework, or extr
 
 Anything outside the current slice. No “while we’re here.”
 
-No website, AI, dialect translation, process isolation, equivalence prover, sandbox, logging framework, or retry layer.
+No website, model API, dialect translation, process isolation, equivalence prover, sandbox, logging framework, or retry layer.
 
 No claims of global minimality, cross-engine behavior, or production-ready scale without evidence.
 

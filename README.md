@@ -79,6 +79,16 @@ Both commands should exit 0. Search checks two candidates and exports one row:
 `(-1, NULL)`. Query A returns 1 and B returns 0. The primary key is unique and
 non-NULL; `-1` is a legal INTEGER because the schema does not require positive IDs.
 
+To rediscover that COUNT rewrite (and the other in-subset mistakes) from query A
+alone:
+
+```sh
+.venv/bin/query-witness mutate \
+  --schema examples/rewrite-mistakes/assigned-count/schema.sql \
+  --query-a examples/rewrite-mistakes/assigned-count/query-a.sql \
+  --out ticket-mutations
+```
+
 The saved folder contains:
 
 - `witness.txt` — a readable copy of the finding
@@ -100,11 +110,17 @@ HAVING, self-join, two columns) live under [examples/](examples/).
 
 ```text
 query-witness check --schema SCHEMA --query-a A --query-b B [--out DIR]
+query-witness mutate --schema SCHEMA --query-a A [--out DIR]
 query-witness replay DIR
 ```
 
-Defaults for check: `--max-rows 4`, `--max-candidates 64`, `--timeout-seconds 5`,
-`--memory-mb 64`. A candidate is one database checked against both queries.
+Defaults for check and mutate: `--max-rows 4`, `--max-candidates 64`,
+`--timeout-seconds 5`, `--memory-mb 64`. A candidate is one database checked
+against both queries. `mutate` applies named in-subset rewrite mistakes to query
+A (COUNT(*) to COUNT(column), drop DISTINCT, boundary comparisons, pushing a
+SUM filter into WHERE, self-join on a column) and runs `check` on each pair.
+It does not use a model. Unsupported mutations are skipped, not reported as
+findings.
 
 ## What it can look at
 
@@ -126,7 +142,7 @@ does not mean the queries are equivalent.** Reduction is not globally minimal.
 
 | Exit | Outcome | Meaning |
 | ---: | --- | --- |
-| 0 | counterexample found | A difference was found and exported, or verified by replay |
+| 0 | counterexample found | A difference was found and exported, or verified by replay. `mutate` exits 0 if any mutation found a witness. |
 | 1 | no counterexample within budget | Finished the budget without a difference (not a proof) |
 | 2 | unsupported input | SQL is outside this slice, or cannot be parsed |
 | 3 | execution failure | Engine, file, config, or witness problem |
