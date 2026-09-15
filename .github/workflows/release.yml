@@ -1,0 +1,119 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - id: meta
+        run: |
+          version=$(python -c 'from query_witness import __version__; print(__version__)')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          test "${GITHUB_REF_NAME#v}" = "$version"
+      - run: python -m pip install -r scripts/release-requirements.txt
+      - env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          export SOURCE_DATE_EPOCH
+          SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+          python -m build --no-isolation --outdir dist
+          python -m twine check --strict \
+            "dist/query_witness-${VERSION}-py3-none-any.whl" \
+            "dist/query_witness-${VERSION}.tar.gz"
+          (cd dist && sha256sum \
+            "query_witness-${VERSION}-py3-none-any.whl" \
+            "query_witness-${VERSION}.tar.gz") > dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            dist/query_witness-${{ steps.meta.outputs.version }}-py3-none-any.whl
+            dist/query_witness-${{ steps.meta.outputs.version }}.tar.gz
+            dist/SHA256SUMS
+
+  verify:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - run: bash scripts/verify-release.sh dist/query_witness-${{ needs.build.outputs.version }}-py3-none-any.whl python
+
+  github-release:
+    needs: [build, verify]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          notes=$(VERSION="$VERSION" python - <<'PY'
+          from pathlib import Path
+          import os
+          version = os.environ["VERSION"]
+          text = Path("CHANGELOG.md").read_text()
+          heading = f"## {version}"
+          start = text.find(heading)
+          if start < 0:
+              print(f"Query Witness {version}")
+              raise SystemExit(0)
+          rest = text[start:]
+          nxt = rest.find("\n## ", 1)
+          print((rest if nxt < 0 else rest[:nxt]).strip())
+          PY
+          )
+          gh release create "v${VERSION}" \
+            "dist/query_witness-${VERSION}-py3-none-any.whl" \
+            "dist/query_witness-${VERSION}.tar.gz" \
+            dist/SHA256SUMS \
+            --title "Query Witness ${VERSION}" \
+            --notes "$notes"
+
+  pypi:
+    needs: [build, verify, github-release]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/query-witness/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - run: rm -f dist/SHA256SUMS
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist

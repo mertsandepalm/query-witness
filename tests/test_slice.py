@@ -170,7 +170,7 @@ def test_export_replay_without_generation(tmp_path, monkeypatch, capsys, a, b, e
         assert results == expected
 
 
-@pytest.mark.parametrize("change", ["rows", "results", "version", "policy"])
+@pytest.mark.parametrize("change", ["rows", "results", "duckdb", "sqlglot", "policy"])
 def test_replay_detects_changed_artifact(tmp_path, capsys, change):
     assert main(check_args(tmp_path)) == 0
     path = tmp_path / "finding" / "witness.json"
@@ -179,8 +179,10 @@ def test_replay_detects_changed_artifact(tmp_path, capsys, change):
         payload["rows"] = [[1]]
     elif change == "results":
         payload["results"][1]["rows"] = [[2]]
-    elif change == "version":
+    elif change == "duckdb":
         payload["versions"]["duckdb"] = "0.0.0"
+    elif change == "sqlglot":
+        payload["versions"]["sqlglot"] = "0.0.0"
     else:
         payload["comparison_policy"] = "unknown"
     path.write_text(json.dumps(payload))
@@ -189,6 +191,17 @@ def test_replay_detects_changed_artifact(tmp_path, capsys, change):
     output = capsys.readouterr().out
     assert "Outcome: execution failure" in output
     assert "Outcome: counterexample found" not in output
+
+
+def test_replay_accepts_different_query_witness_version(tmp_path, capsys):
+    assert main(check_args(tmp_path)) == 0
+    path = tmp_path / "finding" / "witness.json"
+    payload = json.loads(path.read_text())
+    payload["versions"]["query_witness"] = "0.0.0"
+    path.write_text(json.dumps(payload))
+    capsys.readouterr()
+    assert main(["replay", str(path.parent)]) == 0
+    assert "Replay verified" in capsys.readouterr().out
 
 
 def test_cli_outcomes_and_policy(tmp_path, capsys):

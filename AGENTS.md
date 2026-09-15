@@ -55,3 +55,14 @@ Only for non-obvious constraints. No narration of what the next line does.
 4. Is the new code obvious on one reading?
 
 Do not rewrite working code only to satisfy this file. Apply it to new work, and to edits you are already making.
+
+## Releasing
+
+Ship from tags, not from `main`. Follow [RELEASING.md](RELEASING.md).
+
+Replay may accept a different Query Witness version when `format_version` and
+`comparison_policy` are known. DuckDB and SQLGlot versions in the witness must
+still match the install. Changing those pins, the format, or the policy is what
+breaks old `replay` folders — not a patch bump of this CLI.
+
+Do not add an npm/pnpm/bun package. Users install with pip, pipx, or uv.

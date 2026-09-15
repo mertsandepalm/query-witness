@@ -33,6 +33,28 @@ Query Witness finds a table like that, reduces it, and exports it.
 Verified on **CPython 3.11–3.14, Linux x86_64**. Other platforms are unverified.
 Runtime pins: DuckDB 1.5.5 and SQLGlot 30.18.0. [MIT licensed](LICENSE).
 
+This is a Python CLI. Install it with pip, pipx, or uv — not npm, pnpm, or bun.
+
+```sh
+python -m pip install query-witness
+```
+
+Isolated tools:
+
+```sh
+pipx install query-witness
+# or
+uv tool install query-witness
+```
+
+Upgrade later with `pip install -U query-witness`, `pipx upgrade query-witness`,
+or `uv tool upgrade query-witness`. Releases live on
+[PyPI](https://pypi.org/project/query-witness/) and
+[GitHub Releases](https://github.com/mertsandepalm/query-witness/releases).
+If PyPI is not available yet, install the wheel from the latest GitHub Release.
+
+Develop from source:
+
 ```sh
 git clone https://github.com/mertsandepalm/query-witness.git
 cd query-witness
@@ -118,10 +140,12 @@ Columns compare by position, ignoring aliases. **Order is compared only when bot
 queries have ORDER BY**; otherwise rows compare as unordered bags that preserve
 duplicates. DuckDB scan order is not a SQL ordering contract.
 
-Replay requires matching recorded Query Witness, DuckDB, and SQLGlot versions.
-It does not need the original input paths or machine. Use `query-witness replay`
-to check both recorded results; running `reproduce.sql` as one script in Python
-only returns the last statement.
+Replay requires matching recorded DuckDB and SQLGlot versions, plus a comparison
+policy this CLI still understands. The Query Witness version in `witness.json` is
+provenance; upgrading the CLI does not invalidate an older witness. It does not
+need the original input paths or machine. Use `query-witness replay` to check
+both recorded results; running `reproduce.sql` as one script in Python only
+returns the last statement.
 
 ## Develop
 
@@ -130,7 +154,8 @@ only returns the last statement.
 ```
 
 `python -m query_witness` is also an entry point. Engineering notes for this
-slice are in [AGENTS.md](AGENTS.md). Release rebuild steps are in
+slice are in [AGENTS.md](AGENTS.md). How to cut a release is in
+[RELEASING.md](RELEASING.md). The 0.1.0 validation record is in
 [RELEASE.md](RELEASE.md).
 
 ## Exact current subset

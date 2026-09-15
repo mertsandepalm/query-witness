@@ -170,7 +170,7 @@ against the recording, and execute both queries from `reproduce.sql` separately.
 The tests cover the prior comment-termination, parser-depth, and enormous-timeout
 failures through the installed CLI too.
 
-Run `bash scripts/verify-release.sh /absolute/path/to/query_witness-0.1.0-py3-none-any.whl python3.11`
+Run `bash scripts/verify-release.sh /absolute/path/to/query_witness-<version>-py3-none-any.whl python3.11`
 to repeat the installed-package suite with the matching `.tar.gz` beside the wheel, or run
 `python -m pytest tests/test_workflows.py -q -rP` in an environment with the project
 and its test extra installed. The latter prints the witness rows and counts.
@@ -184,5 +184,5 @@ result always remains bounded and inconclusive.
 Recommendation: the demonstrated workflows justify shipping the documented narrow
 SQL scope. No SQL expansion is needed for these five cases. The MIT license,
 advertised Python range, package metadata, instructions, and reproducible builds
-have now been checked. Only the [publishing prerequisites and steps](../../RELEASE.md#publishing-later)
-remain. Outer joins remain an explicit limitation.
+have now been checked. Shipping tagged releases is documented in
+[RELEASING.md](../../RELEASING.md). Outer joins remain an explicit limitation.
