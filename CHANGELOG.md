@@ -7,7 +7,9 @@ and searches each pair with the existing checker. The operators cover the five
 catalog families: COUNT(*) to COUNT(column), drop DISTINCT, comparison
 boundaries, pushing a SUM filter into WHERE, and a self-join on one column.
 Mutations that leave the subset are skipped. No model is involved; both queries
-are still executed verbatim.
+are still executed verbatim. A SUM filter keeps the literal on the same side of
+the comparison. A self-join is not proposed on a PRIMARY KEY. `mutate` exits
+nonzero if any mutation fails, even when another pair produced a witness.
 
 Replay, DuckDB 1.5.5, and SQLGlot 30.18.0 are unchanged.
 

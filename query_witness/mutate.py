@@ -45,21 +45,23 @@ def proposals(schema, query_a):
 
 def _count_star_to_column(schema, query_a, tree, emit):
     meta = parse(schema, query_a, query_a)
-    stars = [
-        node for node in tree.find_all(exp.Count) if type(ungroup(node.this)) is exp.Star
-    ]
-    if not stars:
-        return
-    for column in meta.columns:
-        mutated = tree.copy()
-        replaced = False
-        for node in mutated.find_all(exp.Count):
-            if type(ungroup(node.this)) is exp.Star:
-                node.set("this", exp.column(column))
-                replaced = True
-                break
-        if replaced:
-            yield from emit(f"count-star-to-column-{column}", mutated)
+    star_count = sum(
+        1 for node in tree.find_all(exp.Count) if type(ungroup(node.this)) is exp.Star
+    )
+    for star_index in range(star_count):
+        for column in meta.columns:
+            mutated = tree.copy()
+            seen = 0
+            for node in mutated.find_all(exp.Count):
+                if type(ungroup(node.this)) is exp.Star:
+                    if seen == star_index:
+                        node.set("this", exp.column(column))
+                        break
+                    seen += 1
+            name = f"count-star-to-column-{column}"
+            if star_count > 1:
+                name = f"{name}-{star_index + 1}"
+            yield from emit(name, mutated)
 
 
 def _drop_distinct(schema, query_a, tree, emit):
@@ -93,13 +95,21 @@ def _flip_comparisons(schema, query_a, tree, emit):
 def _sum_column_and_literal(node):
     if type(node) not in (exp.GT, exp.GTE, exp.LT, exp.LTE):
         return None
-    sides = ((ungroup(node.this), ungroup(node.expression)),
-             (ungroup(node.expression), ungroup(node.this)))
-    for aggregate, other in sides:
-        if type(aggregate) is exp.Sum and type(other) is exp.Literal:
-            column = ungroup(aggregate.this)
-            if type(column) is exp.Column:
-                return type(node), identifier(column.this), other
+    left, right = ungroup(node.this), ungroup(node.expression)
+
+    def sum_column(side):
+        if type(side) is not exp.Sum:
+            return None
+        column = ungroup(side.this)
+        if type(column) is exp.Column:
+            return identifier(column.this)
+        return None
+
+    left_column, right_column = sum_column(left), sum_column(right)
+    if left_column is not None and type(right) is exp.Literal:
+        return "left", type(node), left_column, right
+    if right_column is not None and type(left) is exp.Literal:
+        return "right", type(node), right_column, left
     return None
 
 
@@ -119,9 +129,12 @@ def _push_sum_filter(schema, query_a, tree, emit):
         match = _sum_column_and_literal(node)
         if match is not None:
             found.append(match)
-    for index, (operator, column, literal) in enumerate(found):
+    for index, (side, operator, column, literal) in enumerate(found):
         mutated = tree.copy()
-        predicate = operator(this=exp.column(column), expression=literal.copy())
+        if side == "left":
+            predicate = operator(this=exp.column(column), expression=literal.copy())
+        else:
+            predicate = operator(this=literal.copy(), expression=exp.column(column))
         where = mutated.args.get("where")
         if where is None:
             mutated.set("where", exp.Where(this=predicate))
@@ -162,6 +175,8 @@ def _self_join_on_column(schema, query_a, tree, emit):
         where_sql = " WHERE " + render(predicate)
     select_sql = ", ".join(projections)
     for column in meta.columns:
+        if column == meta.primary_key:
+            continue
         query_b = (
             f"SELECT {select_sql} FROM {table} AS a JOIN {table} AS b "
             f"ON a.{column} = b.{column}{where_sql}"

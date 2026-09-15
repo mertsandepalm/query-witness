@@ -142,7 +142,7 @@ does not mean the queries are equivalent.** Reduction is not globally minimal.
 
 | Exit | Outcome | Meaning |
 | ---: | --- | --- |
-| 0 | counterexample found | A difference was found and exported, or verified by replay. `mutate` exits 0 if any mutation found a witness. |
+| 0 | counterexample found | A difference was found and exported, or verified by replay. `mutate` exits 0 only if at least one mutation found a witness and none failed. |
 | 1 | no counterexample within budget | Finished the budget without a difference (not a proof) |
 | 2 | unsupported input | SQL is outside this slice, or cannot be parsed |
 | 3 | execution failure | Engine, file, config, or witness problem |

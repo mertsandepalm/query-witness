@@ -78,7 +78,7 @@ def emit(outcome, diagnostic, detail=None):
     return int(outcome)
 
 
-def check_pair(schema, query_a, query_b, config, out, start):
+def check_pair(schema, query_a, query_b, config, out, start, create_parent=False):
     inputs = parse(schema, query_a, query_b)
     if inputs.ordered[0] != inputs.ordered[1]:
         print(ORDER_NOTICE)
@@ -89,6 +89,9 @@ def check_pair(schema, query_a, query_b, config, out, start):
     if found is None:
         return emit(Outcome.NO_COUNTEREXAMPLE, f"Checked {checked} candidates; {reason}.")
     rows, results = found
+    out = Path(out)
+    if create_parent:
+        out.parent.mkdir(exist_ok=True)
     export(out, inputs, config, rows, results, checked)
     return emit(
         Outcome.FOUND,
@@ -110,7 +113,6 @@ def mutate_command(args):
         )
     if args.out.exists() or args.out.is_symlink():
         raise FileExistsError(f"Output already exists: {args.out}")
-    args.out.mkdir()
     found = 0
     limited = 0
     failed = 0
@@ -119,7 +121,10 @@ def mutate_command(args):
         print(f"\nMutation: {name}")
         start = time.monotonic()
         try:
-            code = check_pair(schema, query_a, query_b, config, args.out / name, start)
+            code = check_pair(
+                schema, query_a, query_b, config, args.out / name, start,
+                create_parent=True,
+            )
         except Unsupported as exc:
             code = emit(Outcome.UNSUPPORTED, str(exc))
         except (Limit, duckdb.OutOfMemoryException, MemoryError) as exc:
@@ -130,15 +135,15 @@ def mutate_command(args):
             found += 1
         elif code == Outcome.LIMIT:
             limited += 1
-        elif code == Outcome.FAILURE:
+        elif code in (Outcome.FAILURE, Outcome.UNSUPPORTED):
             failed += 1
     summary = f"Mutations with a witness: {found} of {len(applied)}."
-    if found:
-        return emit(Outcome.FOUND, summary)
     if failed:
         return emit(Outcome.FAILURE, summary)
-    if limited:
+    if limited and not found:
         return emit(Outcome.LIMIT, summary)
+    if found:
+        return emit(Outcome.FOUND, summary)
     return emit(Outcome.NO_COUNTEREXAMPLE, summary)
 
 
