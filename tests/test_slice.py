@@ -1895,6 +1895,42 @@ def test_nested_witness_json_is_input_failure(tmp_path, opening, closing):
     assert "Traceback" not in result.stderr
 
 
+@pytest.mark.parametrize("version", [True, 1.0, "1"])
+def test_replay_rejects_non_integer_format_version(tmp_path, version):
+    assert main(check_args(tmp_path)) == 0
+    path = tmp_path / "finding" / "witness.json"
+    payload = json.loads(path.read_text())
+    payload["format_version"] = version
+    path.write_text(json.dumps(payload))
+    assert main(["replay", str(path.parent)]) == 3
+
+
+@pytest.mark.parametrize("dtype", ["INT4", "INT32", "int4"])
+def test_int_width_aliases_are_unsupported(dtype):
+    with pytest.raises(Unsupported, match="INTEGER"):
+        parse(f"CREATE TABLE t (x {dtype})", ALL, FILTERED)
+
+
+def test_int_and_integer_remain_supported():
+    parse("CREATE TABLE t (x INT)", ALL, FILTERED)
+    parse("CREATE TABLE t (x INTEGER)", ALL, FILTERED)
+
+
+def test_witness_limit_is_bytes(tmp_path):
+    assert main(check_args(tmp_path)) == 0
+    path = tmp_path / "finding" / "witness.json"
+    path.write_bytes(b"a" * 1_048_577)
+    assert main(["replay", str(path.parent)]) == 3
+
+
+def test_query_interrupted_is_cancellation(tmp_path, monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("Query interrupted")
+    monkeypatch.setattr(Engine, "compare", boom)
+    with pytest.raises(KeyboardInterrupt):
+        main(check_args(tmp_path))
+
+
 @pytest.mark.parametrize("sql,params", [
     ("SELECT SUM(i) FROM range(1000000000000) t(i)", None),
     ("INSERT INTO t SELECT 0 FROM (SELECT SUM(i) AS s FROM range(?) t(i)) WHERE s > 0",

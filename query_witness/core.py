@@ -209,6 +209,10 @@ class Engine:
             raise Limit(f"DuckDB memory budget reached: {exc}") from exc
         except duckdb.InterruptException as exc:
             raise Limit("DuckDB execution interrupted by time budget") from exc
+        except RuntimeError as exc:
+            if isinstance(exc.__cause__, KeyboardInterrupt) or str(exc) == "Query interrupted":
+                raise KeyboardInterrupt from None
+            raise
         self.check_time()
         return description, rows
 
@@ -251,6 +255,7 @@ def search(engine):
     for rows in candidates(engine.config, engine.inputs):
         engine.check_time()
         if checked == engine.config.max_candidates:
+            engine.check_time()
             return None, checked, "candidate budget exhausted"
         results = engine.compare(rows)
         checked += 1

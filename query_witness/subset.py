@@ -106,6 +106,10 @@ def parse(schema, query_a, query_b):
             nullable.append(False)
         else:
             nullable.append(exp.NotNullColumnConstraint not in constraint_kinds)
+    for token in Tokenizer(dialect="duckdb").tokenize(schema):
+        if token.token_type == TokenType.INT:
+            require(token.text.upper() in ("INT", "INTEGER"),
+                    "This slice supports only INTEGER (INT)")
 
     def column_ref(node, aliases=None):
         if aliases:

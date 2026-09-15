@@ -183,8 +183,8 @@ def main(argv=None):
     except (duckdb.Error, OSError, ValueError) as exc:
         return emit(Outcome.FAILURE, f"{type(exc).__name__}: {exc}")
     except RuntimeError as exc:
-        if isinstance(exc.__cause__, KeyboardInterrupt):
-            raise exc.__cause__ from None
+        if isinstance(exc.__cause__, KeyboardInterrupt) or str(exc) == "Query interrupted":
+            raise KeyboardInterrupt from None
         raise
 
 

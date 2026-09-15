@@ -1,5 +1,12 @@
 # Release notes
 
+## 0.2.1 — fail-closed replay and types
+
+Replay requires `format_version` to be the integer `1` (`true` and `1.0` are
+rejected). The witness size cap is 1 MiB of UTF-8 bytes. Schema types INT4 and
+INT32 are rejected; only INTEGER and INT remain. DuckDB `Query interrupted` is
+treated as cancellation, not a finished search.
+
 ## 0.2.0 — named rewrite mutations
 
 `query-witness mutate` applies mechanical in-subset rewrite mistakes to query A

@@ -113,15 +113,20 @@ def export(directory, inputs, config, rows, results, checked):
 
 
 def load(directory):
-    with (Path(directory) / "witness.json").open(encoding="utf-8") as stream:
+    with (Path(directory) / "witness.json").open("rb") as stream:
         source = stream.read(1_048_577)
     if len(source) > 1_048_576:
         raise ValueError("Witness exceeds the 1 MiB input limit")
     try:
-        payload = json.loads(source)
+        text = source.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("Witness is not UTF-8") from exc
+    try:
+        payload = json.loads(text)
     except RecursionError as exc:
         raise ValueError("Witness JSON exceeds parser nesting capacity") from exc
-    if type(payload) is not dict or payload.get("format_version") != 1:
+    version = payload.get("format_version") if type(payload) is dict else None
+    if type(payload) is not dict or type(version) is not int or version != 1:
         raise ValueError("Unknown witness format")
     for field, expected_type in (("versions", dict), ("config", dict), ("schema", str),
                                  ("query_a", str), ("query_b", str), ("rows", list), ("results", list)):
