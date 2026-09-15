@@ -3,7 +3,9 @@
 These are **constructed examples**, not customer incidents or a benchmark sampled
 from production queries. They isolate five plausible rewrite mistakes using the
 supported integer-only SQL subset. Each directory contains a schema and the
-original `query-a.sql` and rewritten `query-b.sql`.
+original `query-a.sql` and rewritten `query-b.sql`. `query-witness mutate` on
+each `query-a.sql` rediscovers that rewrite as a named operator and searches for
+a witness.
 
 The independent examples below establish a discrepancy before running the search.
 `tests/test_workflows.py` executes these hand-written tables directly in DuckDB
