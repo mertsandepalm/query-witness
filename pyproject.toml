@@ -21,6 +21,10 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 
+[project.urls]
+Homepage = "https://sandepalm.com/projects/query-witness"
+Repository = "https://github.com/mertsandepalm/query-witness"
+
 [project.optional-dependencies]
 test = ["pytest==9.1.1"]
 
