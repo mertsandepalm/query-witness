@@ -76,7 +76,7 @@ def differs(a, b, sequential=False):
 
 def validate_rows(rows, max_rows, inputs: Input):
     if len(rows) > max_rows:
-        raise Limit("Data exceeds max_rows")
+        raise ValueError("Invalid data: more rows than recorded max_rows")
     for row in rows:
         if type(row) not in (list, tuple) or len(row) != len(inputs.columns):
             raise ValueError(f"Invalid data: expected {len(inputs.columns)} cells per row")
@@ -185,6 +185,8 @@ class Engine:
                     self.connection.extract_statements(source)
                 except duckdb.ParserException as exc:
                     raise Unsupported(f"DuckDB cannot parse source SQL: {exc}") from exc
+                except duckdb.InterruptException as exc:
+                    raise Limit("DuckDB execution interrupted by time budget") from exc
             self.execute(self.inputs.schema)
         except BaseException:
             self.__exit__(None, None, None)

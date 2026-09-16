@@ -1,5 +1,12 @@
 # Release notes
 
+## 0.2.2 — type-position INTEGER only
+
+INT4 and INT32 are still rejected as column types. Table and column names such as
+`int4` are allowed. Replay of more rows than recorded `max_rows` is invalid data,
+not a resource limit. `mutate` exits unsupported when every pair is unsupported
+SQL. DuckDB interrupts during native parse are a time-budget limit.
+
 ## 0.2.1 — fail-closed replay and types
 
 Replay requires `format_version` to be the integer `1` (`true` and `1.0` are

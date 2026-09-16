@@ -1916,6 +1916,42 @@ def test_int_and_integer_remain_supported():
     parse("CREATE TABLE t (x INTEGER)", ALL, FILTERED)
 
 
+def test_int4_as_table_or_column_name_is_supported():
+    parse(
+        "CREATE TABLE int4 (x INTEGER)",
+        "SELECT x FROM int4",
+        "SELECT x FROM int4 WHERE x = x",
+    )
+    parse(
+        "CREATE TABLE t (int4 INTEGER)",
+        "SELECT int4 FROM t",
+        "SELECT int4 FROM t WHERE int4 = int4",
+    )
+
+
+def test_replay_too_many_rows_is_invalid_data(tmp_path, capsys):
+    assert main(check_args(tmp_path)) == 0
+    path = tmp_path / "finding" / "witness.json"
+    payload = json.loads(path.read_text())
+    payload["config"]["max_rows"] = 1
+    payload["rows"] = [[-1], [0]]
+    path.write_text(json.dumps(payload))
+    capsys.readouterr()
+    assert main(["replay", str(path.parent)]) == 3
+    output = capsys.readouterr().out
+    assert "Outcome: execution failure" in output
+    assert "more rows than recorded max_rows" in output
+
+
+def test_native_parse_interrupt_is_a_limit(tmp_path, monkeypatch, capsys):
+    def boom(_self, _source):
+        raise duckdb.InterruptException("INTERRUPT")
+    monkeypatch.setattr(duckdb.DuckDBPyConnection, "extract_statements", boom)
+    assert main(check_args(tmp_path)) == 4
+    output = capsys.readouterr().out
+    assert "interrupted" in output.lower() or "budget" in output.lower()
+
+
 def test_witness_limit_is_bytes(tmp_path):
     assert main(check_args(tmp_path)) == 0
     path = tmp_path / "finding" / "witness.json"
