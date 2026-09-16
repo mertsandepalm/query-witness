@@ -116,6 +116,7 @@ def mutate_command(args):
     found = 0
     limited = 0
     failed = 0
+    unsupported = 0
     print(f"Mutations: {len(applied)}")
     for name, query_b in applied:
         print(f"\nMutation: {name}")
@@ -135,10 +136,14 @@ def mutate_command(args):
             found += 1
         elif code == Outcome.LIMIT:
             limited += 1
-        elif code in (Outcome.FAILURE, Outcome.UNSUPPORTED):
+        elif code == Outcome.UNSUPPORTED:
+            unsupported += 1
+        elif code == Outcome.FAILURE:
             failed += 1
     summary = f"Mutations with a witness: {found} of {len(applied)}."
-    if failed:
+    if unsupported == len(applied):
+        return emit(Outcome.UNSUPPORTED, summary)
+    if failed or unsupported:
         return emit(Outcome.FAILURE, summary)
     if limited and not found:
         return emit(Outcome.LIMIT, summary)

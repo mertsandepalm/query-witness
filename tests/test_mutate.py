@@ -159,3 +159,23 @@ def test_mutate_failure_is_not_success(tmp_path, monkeypatch, capsys):
         "--out", str(tmp_path / "mutations"),
     ]) == 3
     assert "injected search failure" in capsys.readouterr().out
+
+
+def test_mutate_all_unsupported_exits_unsupported(tmp_path, capsys):
+    (tmp_path / "schema.sql").write_text(
+        "CREATE TABLE asc (x INTEGER);", encoding="utf-8",
+    )
+    (tmp_path / "query-a.sql").write_text(
+        "SELECT x FROM asc WHERE x >= 0;", encoding="utf-8",
+    )
+    assert main([
+        "mutate",
+        "--schema", str(tmp_path / "schema.sql"),
+        "--query-a", str(tmp_path / "query-a.sql"),
+        "--out", str(tmp_path / "mutations"),
+    ]) == 2
+    output = capsys.readouterr().out
+    assert "unsupported input" in output
+    assert output.rstrip().endswith("Mutations with a witness: 0 of 1.") or (
+        "Mutations with a witness: 0 of" in output and output.count("Outcome: execution failure") == 0
+    )
